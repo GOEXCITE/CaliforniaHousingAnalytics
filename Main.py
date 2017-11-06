@@ -3,9 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import hashlib
-# import sklearn.model_selection
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
+from pandas.plotting import scatter_matrix
 
 # print("Let Ponyo be smarter!")
 
@@ -59,13 +59,16 @@ for train_index, test_index in split.split(housing, housing["income_cat"]):
 housing = strat_train_set.copy()
 # housing.plot(kind="scatter", x="longitude", y="latitude", alpha=0.1)
 # plt.show()
-housing.plot(kind="scatter", x="longitude", y="latitude", alpha=0.4,
-             s=housing["population"]/100, label="population", figsize=(10,7),
-             c="median_house_value", cmap=plt.get_cmap("jet"), colorbar=True)
+# housing.plot(kind="scatter", x="longitude", y="latitude", alpha=0.4,
+#              s=housing["population"]/100, label="population", figsize=(10,7),
+#              c="median_house_value", cmap=plt.get_cmap("jet"), colorbar=True)
 # plt.legend()
-plt.show()
+# plt.show()
 
 # ------ Looking for Correlations ------
-# corr_matrix = strat_train_set.corr()
-# corr_matrix["median_house_value"].sort_value(ascending=False)
-# print(corr_matrix)
+corr_matrix = housing.corr()
+# print(corr_matrix["median_house_value"].sort_values(ascending=False))
+# attributes = ["median_house_value", "median_income", "total_rooms", "housing_median_age"]
+# scatter_matrix(housing[attributes], figsize=(12,8))
+# housing.plot(kind="scatter", x="median_income", y="median_house_value", alpha=0.1)
+# plt.show()
