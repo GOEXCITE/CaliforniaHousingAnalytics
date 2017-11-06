@@ -66,9 +66,16 @@ housing = strat_train_set.copy()
 # plt.show()
 
 # ------ Looking for Correlations ------
-corr_matrix = housing.corr()
+# corr_matrix = housing.corr()
 # print(corr_matrix["median_house_value"].sort_values(ascending=False))
 # attributes = ["median_house_value", "median_income", "total_rooms", "housing_median_age"]
 # scatter_matrix(housing[attributes], figsize=(12,8))
 # housing.plot(kind="scatter", x="median_income", y="median_house_value", alpha=0.1)
 # plt.show()
+
+# ------ Experimenting with Attribute Combinations ------
+housing["rooms_per_household"] = housing["total_rooms"]/housing["households"]
+housing["bedrooms_per_room"] = housing["total_bedrooms"]/housing["total_rooms"]
+housing["population_per_household"] = housing["population"]/housing["households"]
+corr_matrix = housing.corr()
+print(corr_matrix["median_house_value"].sort_values(ascending=False))
