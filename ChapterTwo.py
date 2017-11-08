@@ -7,10 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 from pandas.plotting import scatter_matrix
 from sklearn.preprocessing import Imputer
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelBinarizer
-import CombinedAttributesAdder
 
 # print("Let Ponyo be smarter!")
 
@@ -102,6 +99,8 @@ housing_num = housing.drop("ocean_proximity", axis=1)
 # print(housing_num.median().values)
 
 # ------ Handling Text and Categorical Attributes ------
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 # # ------ One-hot encoder ------
 # encoder = LabelEncoder()
 # housing_cat = housing["ocean_proximity"]
@@ -118,16 +117,35 @@ housing_num = housing.drop("ocean_proximity", axis=1)
 # print(housing_cat_1hot)
 
 # ------ Custom Transformers ------
-attr_adder = CombinedAttributesAdder.CombinedAttributesAdder(add_bedrooms_per_room=False)
-housing_extra_attribs = attr_adder.transform(housing.values)
-# print(housing_extra_attribs) # -> ERROR
+from sklearn.base import BaseEstimator, TransformerMixin
 
-# ------ Custom Transformers ------
+# column index
+rooms_ix, bedrooms_ix, population_ix, household_ix = 3, 4, 5, 6
+
+class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
+    def __init__(self, add_bedrooms_per_room = True): # no *args or **kargs
+        self.add_bedrooms_per_room = add_bedrooms_per_room
+    def fit(self, X, y=None):
+        return self  # nothing else to do
+    def transform(self, X, y=None):
+        rooms_per_household = X[:, rooms_ix] / X[:, household_ix]
+        population_per_household = X[:, population_ix] / X[:, household_ix]
+        if self.add_bedrooms_per_room:
+            bedrooms_per_room = X[:, bedrooms_ix] / X[:, rooms_ix]
+            return np.c_[X, rooms_per_household, population_per_household,
+                         bedrooms_per_room]
+        else:
+            return np.c_[X, rooms_per_household, population_per_household]
+
+# attr_adder = CombinedAttributesAdder(add_bedrooms_per_room=False)
+# housing_extra_attribs = attr_adder.transform(housing.values)
+
+# ------ Transformation Pipelines ------
+# @param using pip3 install scikit-learn==0.18.0
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-
 # num_pipeline = Pipeline([('imputer', Imputer(strategy="median")),
-#                          ('attribs_adder', CombinedAttributesAdder.CombinedAttributesAdder()),
+#                          ('attribs_adder', CombinedAttributesAdder()),
 #                          ('std_scaler', StandardScaler())])
 # housing_num_tr = num_pipeline.fit_transform(housing_num)
 
@@ -143,8 +161,46 @@ class DataFrameSelector(BaseEstimator, TransformerMixin):
     def transform(self, X):
         return X[self.attribute_names].values
 
+num_attribs = list(housing_num)
+cat_attribs = ["ocean_proximity"]
+
 num_pipeline = Pipeline([
+        ('selector', DataFrameSelector(num_attribs)),
         ('imputer', Imputer(strategy="median")),
         ('attribs_adder', CombinedAttributesAdder()),
         ('std_scaler', StandardScaler()),
     ])
+
+cat_pipeline = Pipeline([
+        ('selector', DataFrameSelector(cat_attribs)),
+        ('label_binarizer', LabelBinarizer()),
+    ])
+
+from sklearn.pipeline import FeatureUnion
+
+full_pipeline = FeatureUnion(transformer_list=[
+        ("num_pipeline", num_pipeline),
+        ("cat_pipeline", cat_pipeline),
+    ])
+
+housing_prepared = full_pipeline.fit_transform(housing)
+# print(housing_prepared)
+# print(housing_prepared.shape)
+
+# ------ Training ------
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+lin_reg.fit(housing_prepared, housing_labels)
+
+some_data = housing.iloc[:5]
+some_labels = housing_labels.iloc[:5]
+some_data_prepared = full_pipeline.transform(some_data)
+# print("Predictions:", lin_reg.predict(some_data_prepared))
+# print("Labels", list(some_labels))
+
+from sklearn.metrics import mean_squared_error
+housing_predictions = lin_reg.predict(housing_prepared)
+lin_mse = mean_squared_error(housing_labels, housing_predictions)
+lin_rmse = np.sqrt(lin_mse)
+print(lin_rmse)
