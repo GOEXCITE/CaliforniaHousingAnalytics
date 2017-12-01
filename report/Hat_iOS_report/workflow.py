@@ -7,12 +7,18 @@ DATA_PATH = os.path.join("data", "Report1550_e.csv")
 
 rawData = pd.DataFrame.from_csv(DATA_PATH)
 
-rawData.info()
+# rawData.info()
 
-rawData.dropna(subset=['SHOW'])
-rawData.info()
+# rawData.dropna(subset=['SHOW'])
+# rawData.describe()
 # rawData.hist(bins=50, figsize=(20, 15))
 # plt.show()
+
+for i in range(len(rawData)):
+    if rawData.ix[i, 'evar96'] == 'SHOW':
+        rawData = rawData.drop(i)
+
+rawData.info()
 
 # checkNotShowData = rawData.copy()
 #
